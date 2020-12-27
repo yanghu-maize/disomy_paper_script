@@ -1,0 +1,37 @@
+# Copy number analysis pipeline, use TB-10L19 disomy (10L26D_S10_R1_001.fastq) as an example 
+# fastq files store in fastq_folder
+# scripts store in script_folder
+
+# 1. filter low quality reads
+# use FASTX_Toolkit/fastq_quality_filter to filter reads, this tool works well for single-end reads
+mkdir filter_low_quality_reads_folder
+sbatch script_folder/P2_filter_low_quality_reads.sh
+
+# 2. map to the genome
+# use bowtie2 for the alignment, also need reference genome, which stores in Maize_reference_genome_W22_folder
+mkdir bowtie_output_folder
+mkdir bowtie_output_folder/10L26D_S10_R1_001_trim_fastqc
+sbatch  script_folder/P3_map_to_genome_bowtie.sh
+
+# 3. get unique mapped reads
+sbatch script_folder/P4_get_unique_mapped_reads.sh
+
+# 4. get reads counts from the gene regions 
+# need Zea_mays_W22_multicom.gff and Zea_mays_W22_multicom
+sbatch script_folder/P5_get_read_counts_for_genes.sh
+
+# 5. get reads counts from fixed window (1 Mb)
+sbatch script_folder/P6_get_read_counts_for_1Mb.sh
+
+# 6. visualize copy number variation from gene region
+# get counts from gene region for the control (e.g haploid control, H22, fastq file H22D_S1_R1_001.fastq), make control_treatment.txt
+mkdir combine_counts_gene_W22_folder
+module load R/R-3.3.1
+perl script_folder/P7_combine_DNA_gene_counts_batch_W22.pl script_folder/control_treatment.txt bowtie_output_folder combine_counts_gene_W22_folder
+
+# 7. visualize copy number variation from 1 Mb region
+mkdir combine_counts_res1MB_folder
+module load R/R-3.3.1
+perl script_folder/P7_combine_DNA_region_res1MB_batch.pl  script_folder/control_treatment.txt bowtie_output_folder combine_counts_res1MB_folder
+
+
